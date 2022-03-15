@@ -1,0 +1,18 @@
+#!/usr/bin/env -S bash -eu
+
+BINDIR="$(dirname "$(command -v "${0}")")"
+ARCH="$(uname -m)"
+
+[[ "${ARCH}" == 'x86_64' ]] && LIB_SUFFIX='64' || LIB_SUFFIX=''
+
+export XDG_RUNTIME_DIR=/var/run/chrome
+export LD_ARGV0_REL=../bin/sommelier
+
+exec /lib${LIB_SUFFIX}/ld-linux-*.so.? \
+  --argv0 ${BINDIR}/sommelier \
+  --library-path ${BINDIR}/../lib${LIB_SUFFIX} \
+  --inhibit-rpath '' \
+    ${BINDIR}/sommelier.elf \
+      --display=wayland-0 \
+      --drm-device=/dev/dri/renderD128 \
+      "${@}"

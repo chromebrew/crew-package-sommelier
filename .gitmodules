@@ -1,0 +1,6 @@
+[submodule "platform2"]
+	path = platform2
+	url = https://chromium.googlesource.com/chromiumos/platform2.git
+[submodule "patches"]
+	path = patches
+	url = https://github.com/supechicken/sommelier-chromiumos-patch.git
