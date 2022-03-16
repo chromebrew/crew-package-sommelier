@@ -1,0 +1,25 @@
+diff -Nur somm1/sommelier.cc somm2/sommelier.cc
+--- somm1/sommelier.cc	2022-03-16 14:54:18.678670319 +0800
++++ somm2/sommelier.cc	2022-03-16 14:54:52.132387403 +0800
+@@ -2407,16 +2407,11 @@
+   wl_array_init(&ctx->selection_data);
+   ctx->selection_data_ack_pending = 0;
+ 
+-  int pipe_fd;
+-  rv = ctx->channel->create_pipe(pipe_fd);
+-  if (rv) {
+-    fprintf(stderr, "error: failed to create virtwl pipe: %s\n", strerror(-rv));
+-    sl_send_selection_notify(ctx, XCB_ATOM_NONE);
+-    return;
+-  }
+-
+-  fd_to_receive = pipe_fd;
+-  fd_to_wayland = pipe_fd;
++  int p[2];
++  rv = pipe2(p, O_CLOEXEC | O_NONBLOCK);
++  errno_assert(!rv);
++  fd_to_receive = p[0];
++  fd_to_wayland = p[1];
+ 
+   xcb_get_atom_name_reply_t* atom_name_reply =
+       xcb_get_atom_name_reply(ctx->connection, atom_name_cookie, NULL);

@@ -1,0 +1,43 @@
+diff -Nur somm1/sommelier-shm.cc somm2/sommelier-shm.cc
+--- somm1/sommelier-shm.cc	2022-03-16 14:54:18.677669819 +0800
++++ somm2/sommelier-shm.cc	2022-03-16 14:54:52.133387903 +0800
+@@ -133,25 +133,9 @@
+   struct sl_host_shm_pool* host =
+       static_cast<sl_host_shm_pool*>(wl_resource_get_user_data(resource));
+ 
+-  struct sl_host_buffer* host_buffer =
+-      sl_create_host_buffer(host->shm->ctx, client, id, NULL, width, height);
+-
+-  host_buffer->shm_format = format;
+-  host_buffer->shm_mmap = sl_mmap_create(
+-      host->fd, sl_size_for_shm_format(format, height, stride),
+-      sl_shm_bpp_for_shm_format(format),
+-      sl_shm_num_planes_for_shm_format(format), offset, stride,
+-      offset + sl_offset_for_shm_format_plane(format, height, stride, 1),
+-      stride, sl_y_subsampling_for_shm_format_plane(format, 0),
+-      sl_y_subsampling_for_shm_format_plane(format, 1));
+-  // In the case of mmaps created from the client buffer, we want to be able
+-  // to close the FD when the client releases the shm pool (i.e. when it's
+-  // done transferring) as opposed to when the pool is freed (i.e. when we're
+-  // done drawing).
+-  // We do this by removing the handle to the FD after it has been mmapped,
+-  // which prevents a double-close.
+-  host_buffer->shm_mmap->fd = -1;
+-  host_buffer->shm_mmap->buffer_resource = host_buffer->resource;
++  assert(host->proxy);
++  sl_create_host_buffer(host->shm->ctx, client, id,
++                        wl_shm_pool_create_buffer(host->proxy, offset, width, height, stride, format), width, height);
+ }
+ 
+ static void sl_host_shm_pool_destroy(struct wl_client* client,
+@@ -205,7 +189,9 @@
+                                  &sl_shm_pool_implementation, host_shm_pool,
+                                  sl_destroy_host_shm_pool);
+ 
+-  host_shm_pool->fd = fd;
++  host_shm_pool->proxy = wl_shm_create_pool(host->shm_proxy, fd, size);
++  wl_shm_pool_set_user_data(host_shm_pool->proxy, host_shm_pool);
++  close(fd);
+ }
+ 
+ static const struct wl_shm_interface sl_shm_implementation = {

@@ -1,0 +1,12 @@
+diff -Nur somm1/virtualization/virtwl_channel.cc somm2/virtualization/virtwl_channel.cc
+--- somm1/virtualization/virtwl_channel.cc	2022-03-16 14:54:18.678670319 +0800
++++ somm2/virtualization/virtwl_channel.cc	2022-03-16 14:54:52.133387903 +0800
+@@ -16,7 +16,7 @@
+ #include "linux-headers/virtwl.h"  // NOLINT(build/include_directory)
+ #include "wayland_channel.h"       // NOLINT(build/include_directory)
+ 
+-#define VIRTWL_DEVICE "/dev/wl0"
++#define VIRTWL_DEVICE "/dev/null"
+ #define MAX_SEND_SIZE (DEFAULT_BUFFER_SIZE - sizeof(struct virtwl_ioctl_txn))
+ 
+ VirtWaylandChannel::~VirtWaylandChannel() {

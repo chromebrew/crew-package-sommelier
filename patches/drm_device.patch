@@ -1,0 +1,30 @@
+diff -Nur somm1/sommelier.cc somm2/sommelier.cc
+--- somm1/sommelier.cc	2022-03-16 14:54:18.678670319 +0800
++++ somm2/sommelier.cc	2022-03-16 14:54:52.132387403 +0800
+@@ -3068,6 +3063,7 @@
+   struct sl_context ctx;
+   sl_context_init_default(&ctx);
+ 
++  const char* drm_device = getenv("SOMMELIER_DRM_DEVICE");
+   const char* display = getenv("SOMMELIER_DISPLAY");
+   const char* scale = getenv("SOMMELIER_SCALE");
+   const char* dpi = getenv("SOMMELIER_DPI");
+@@ -3178,6 +3174,8 @@
+       ctx.use_explicit_fence = true;
+     } else if (strstr(arg, "--virtgpu-channel") == arg) {
+       ctx.use_virtgpu_channel = true;
++    } else if (strstr(arg, "--drm-device") == arg) {
++      drm_device = sl_arg_value(arg);
+ #ifdef PERFETTO_TRACING
+     } else if (strstr(arg, "--trace-filename") == arg) {
+       ctx.trace_filename = sl_arg_value(arg);
+@@ -3419,8 +3417,7 @@
+     return EXIT_FAILURE;
+   }
+ 
+-  char* drm_device = NULL;
+-  int drm_fd = open_virtgpu(&drm_device);
++  int drm_fd = open(drm_device, O_RDWR | O_CLOEXEC);
+   if (drm_fd >= 0) {
+     ctx.gbm = gbm_create_device(drm_fd);
+     if (!ctx.gbm) {
