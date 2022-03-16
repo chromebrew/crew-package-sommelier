@@ -116,18 +116,22 @@ end
 
 def vaild_daemon_running?
   # vaild_daemon_running: check sommelier process validity
-  x_pid = File.read('/tmp/sommelier-x.pid') if File.exist?('/tmp/sommelier-x.pid')
-  wl_pid = File.read('/tmp/sommelier-wl.pid') if File.exist?('/tmp/sommelier-wl.pid')
+  if File.exist?('/tmp/sommelier-x.pid') and File.exist?('/tmp/sommelier-wl.pid')
+    x_pid = File.read('/tmp/sommelier-x.pid')
+    wl_pid = File.read('/tmp/sommelier-wl.pid')
 
-  [ x_pid, wl_pid ].each do |pid|
-    begin
-      # use Process.kill to test pid listed in /tmp/sommelier-*.pid files
-      Process.kill(0, pid.to_i)
-    rescue Errno::ESRCH
-      return false
+    [ x_pid, wl_pid ].each do |pid|
+      begin
+        # use Process.kill to test pid listed in /tmp/sommelier-*.pid files
+        Process.kill(0, pid.to_i)
+      rescue Errno::ESRCH
+        return false
+      end
     end
+    return true
+  else
+    return false
   end
-  return true
 end
 
 if $0 =~ /(re)?startsommelier$/ or ARGV[0] =~ /^--(re)?start$/
@@ -142,6 +146,7 @@ elsif $0 =~ /stopsommelier/ or ARGV[0] == '--stop'
   stop_somm
 elsif ARGV[0] == '--log'
   io = File.open($LOGFILE, 'r')
+  io.sync = true
   # print daemon output, check and print new outputs repeatedly
   while (sleep 0.2; log = io.read) do
     puts log.gsub(/^(\[.*?\])/, "\e[0;33m\\1\e[0m") unless log.empty?
