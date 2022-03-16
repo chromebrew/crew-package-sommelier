@@ -26,6 +26,7 @@ if command -v xsetroot > /dev/null; then
   xsetroot -cursor_name left_ptr
 fi
 
+# allow privileged apps to access X display (allow root user)
 if command -v xhost > /dev/null; then
   xhost +si:localuser:root
 fi

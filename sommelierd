@@ -4,6 +4,7 @@ require 'securerandom'
 
 $LOGFILE = (ENV['SOMMELIER_LOG'].to_s.empty?) ? '/tmp/sommelier.log' : ENV['SOMMELIER_LOG']
 
+# set XDG_RUNTIME_DIR if not set
 ENV['XDG_RUNTIME_DIR'] = (ENV['XDG_RUNTIME_DIR'].to_s.empty?) ? '/var/run/chrome' : ENV['XDG_RUNTIME_DIR']
 
 SOMMELIER_X_DISPLAY = (ENV['SOMMELIER_X_DISPLAY'].to_s.empty?) ? ':0' : ENV['SOMMELIER_X_DISPLAY']
@@ -30,37 +31,37 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
 
     Process.daemon(false, true)
 
+    # redirect output to log file
     STDOUT.reopen($LOGIO)
     STDERR.reopen($LOGIO)
 
+    # write output to log file directly without saving in buffer
     STDOUT.sync = true
     STDERR.sync = true
 
     begin
       IO.popen([ 'sommelier', '-X', '--glamor',
         "--x-display=#{display}",
-        "--x-auth=#{Dir.home}/.Xauthority",
+        "--x-auth=/home/chronos/.Xauthority",
         '--no-exit-with-child',
         'bash', '-c', <<~CMD
           set -eu -o pipefail
 
           export DISPLAY="#{display}"
-          export XAUTHORITY=#{Dir.home}/.Xauthority
 
-          echo -n >> ${XAUTHORITY}
+          echo -n >> /home/chronos/.Xauthority
 
-          xauth -f ${XAUTHORITY} add ${DISPLAY} . "#{SecureRandom.hex(16)}"
+          xauth -f /home/chronos/.Xauthority add ${DISPLAY} . "#{SecureRandom.hex(16)}"
           source #{__dir__}/../etc/sommelierrc
         CMD
       ], err: [:child, :out]) do |io|
         puts "[somm_x11]: process running with PID #{io.pid}"
-        File.write('/tmp/sommelier-x.pid', io.pid)
-        File.write("/tmp/.X11-unix/X#{display.tr(':', '')}.lock", 'somm')
+        File.write('/tmp/sommelier-x.pid', io.pid) # write pid to /tmp/sommelier-x.pid
+        File.write("/tmp/.X11-unix/X#{display.tr(':', '')}.lock", 'somm') # add identity string to lock file
         print "[somm_x11]: #{io.gets}" until io.eof?
-        Process.wait(io.pid)
         io.close
       end
-      puts "[somm_x11]: exited with status #{$?.exitstatus}"
+      puts '[somm_x11]: process exited'
     ensure
       FileUtils.rm_f [ "/tmp/.X11-unix/X#{display.tr(':', '')}", "/tmp/.X11-unix/X#{display.tr(':', '')}.lock" ]
       puts "[somm_x11]: socket /tmp/.X11-unix/X#{display.tr(':', '')} removed."
@@ -74,22 +75,23 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
 
     Process.daemon(false, true)
 
+    # redirect output to log file
     STDOUT.reopen($LOGIO)
     STDERR.reopen($LOGIO)
 
+    # write output to log file directly without staying in buffer
     STDOUT.sync = true
     STDERR.sync = true
 
     begin
       IO.popen([ 'sommelier', '--parent', "--socket=#{display}" ], err: [:child, :out]) do |io|
         puts "[somm_wl]: process running with PID #{io.pid}"
-        File.write('/tmp/sommelier-wl.pid', io.pid)
-        File.write("#{ENV['XDG_RUNTIME_DIR']}/#{display}.lock", 'somm')
+        File.write('/tmp/sommelier-wl.pid', io.pid) # write pid to /tmp/sommelier-wl.pid
+        File.write("#{ENV['XDG_RUNTIME_DIR']}/#{display}.lock", 'somm') # add identity string to lock file
         print "[somm_wl]: #{io.gets}" until io.eof?
-        Process.wait(io.pid)
         io.close
       end
-      puts "[somm_wl]: exited with exit status #{$?.exitstatus}"
+      puts '[somm_wl]: process exited'
     ensure
       FileUtils.rm_f [ "#{ENV['XDG_RUNTIME_DIR']}/#{display}", "#{ENV['XDG_RUNTIME_DIR']}/#{display}.lock" ]
       puts "[somm_wl]: socket #{ENV['XDG_RUNTIME_DIR']}/#{display} removed."
@@ -98,6 +100,7 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
 end
 
 def stop_somm
+  # stop_somm: kill sommelier process listed in /tmp/sommelier-*.pid files
   x_pid = File.read('/tmp/sommelier-x.pid') if File.exist?('/tmp/sommelier-x.pid')
   wl_pid = File.read('/tmp/sommelier-wl.pid') if File.exist?('/tmp/sommelier-wl.pid')
 
@@ -112,11 +115,13 @@ def stop_somm
 end
 
 def vaild_daemon_running?
+  # vaild_daemon_running: check sommelier process validity
   x_pid = File.read('/tmp/sommelier-x.pid') if File.exist?('/tmp/sommelier-x.pid')
   wl_pid = File.read('/tmp/sommelier-wl.pid') if File.exist?('/tmp/sommelier-wl.pid')
 
   [ x_pid, wl_pid ].each do |pid|
     begin
+      # use Process.kill to test pid listed in /tmp/sommelier-*.pid files
       Process.kill(0, pid.to_i)
     rescue Errno::ESRCH
       return false
