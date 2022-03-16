@@ -65,15 +65,15 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
           break if io.eof?
         end
 
-        # add identity string as socket's xattr (used for checking available display in sommelier.env)
-        system 'setfattr', '-n', 'user.wm', '-v', 'sommelier', socket_file
+        # write current display number to /tmp/sommelier-x.display (used for checking available display in sommelier.env)
+        File.write('/tmp/sommelier-x.display', display)
 
         print "[somm_x11]: #{io.gets}" until io.eof?
         io.close
       end
       puts '[somm_x11]: process exited'
     ensure
-      FileUtils.rm_f socket_file
+      FileUtils.rm_f [ socket_file, '/tmp/sommelier-x.display' ]
       puts "[somm_x11]: socket #{socket_file} removed."
     end
   end
@@ -105,15 +105,15 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
           break if io.eof?
         end
 
-        # add identity string as socket's xattr (used for checking available display in sommelier.env)
-        system 'setfattr', '-n', 'user.wm', '-v', 'sommelier', socket_file
+        # write current display number to /tmp/sommelier-wl.display (used for checking available display in sommelier.env)
+        File.write('/tmp/sommelier-wl.display', display)
 
         print "[somm_wl]: #{io.gets}" until io.eof?
         io.close
       end
       puts '[somm_wl]: process exited'
     ensure
-      FileUtils.rm_f [ socket_file, "#{socket_file}.lock" ]
+      FileUtils.rm_f [ socket_file, "#{socket_file}.lock", '/tmp/sommelier-wl.display' ]
       puts "[somm_wl]: socket #{socket_file} removed."
     end
   end
