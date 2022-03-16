@@ -135,10 +135,11 @@ def vaild_daemon_running?
 end
 
 if $0 =~ /(re)?startsommelier$/ or ARGV[0] =~ /^--(re)?start$/
-  $LOGIO = File.open($LOGFILE, 'w')
   stop_somm if $0 =~ /restartsommelier$/ or ARGV[0] == '--restart'
 
   unless vaild_daemon_running?
+    $LOGIO = File.open($LOGFILE, 'w')
+    $LOGIO.sync = true
     start_somm_x_daemon
     start_somm_wl_daemon
   end
@@ -146,7 +147,6 @@ elsif $0 =~ /stopsommelier/ or ARGV[0] == '--stop'
   stop_somm
 elsif ARGV[0] == '--log'
   io = File.open($LOGFILE, 'r')
-  io.sync = true
   # print daemon output, check and print new outputs repeatedly
   while (sleep 0.2; log = io.read) do
     puts log.gsub(/^(\[.*?\])/, "\e[0;33m\\1\e[0m") unless log.empty?
