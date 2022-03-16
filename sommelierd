@@ -59,12 +59,6 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
         puts "[somm_x11]: process running with PID #{io.pid}"
         File.write('/tmp/sommelier-x.pid', io.pid) # write pid to /tmp/sommelier-x.pid
 
-        # wait until sommelier ready
-        until File.exist?(socket_file) do
-          sleep(0.1)
-          break if io.eof?
-        end
-
         # write current display number to /tmp/sommelier-x.display (used for checking available display in sommelier.env)
         File.write('/tmp/sommelier-x.display', display)
 
@@ -98,12 +92,6 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
       IO.popen([ 'sommelier', '--parent', "--socket=#{display}" ], err: [:child, :out]) do |io|
         puts "[somm_wl]: process running with PID #{io.pid}"
         File.write('/tmp/sommelier-wl.pid', io.pid) # write pid to /tmp/sommelier-wl.pid
-
-        # wait until sommelier ready
-        until File.exist?(socket_file) do
-          sleep(0.1)
-          break if io.eof?
-        end
 
         # write current display number to /tmp/sommelier-wl.display (used for checking available display in sommelier.env)
         File.write('/tmp/sommelier-wl.display', display)
