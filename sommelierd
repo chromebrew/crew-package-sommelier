@@ -40,6 +40,7 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
     STDERR.sync = true
 
     begin
+      socket_file = "/tmp/.X11-unix/X#{display.tr(':', '')}"
       IO.popen([ 'sommelier', '-X', '--glamor',
         "--x-display=#{display}",
         "--x-auth=/home/chronos/.Xauthority",
@@ -57,14 +58,23 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
       ], err: [:child, :out]) do |io|
         puts "[somm_x11]: process running with PID #{io.pid}"
         File.write('/tmp/sommelier-x.pid', io.pid) # write pid to /tmp/sommelier-x.pid
-        File.write("/tmp/.X11-unix/X#{display.tr(':', '')}.lock", 'somm') # add identity string to lock file
+
+        # wait until sommelier ready
+        until File.exist?(socket_file) do
+          sleep(0.1)
+          break if io.eof?
+        end
+
+        # add identity string as socket's xattr (used for checking available display in sommelier.env)
+        system 'setfattr', '-n', 'user.wm', '-v', 'sommelier', socket_file
+
         print "[somm_x11]: #{io.gets}" until io.eof?
         io.close
       end
       puts '[somm_x11]: process exited'
     ensure
-      FileUtils.rm_f [ "/tmp/.X11-unix/X#{display.tr(':', '')}", "/tmp/.X11-unix/X#{display.tr(':', '')}.lock" ]
-      puts "[somm_x11]: socket /tmp/.X11-unix/X#{display.tr(':', '')} removed."
+      FileUtils.rm_f socket_file
+      puts "[somm_x11]: socket #{socket_file} removed."
     end
   end
 end
@@ -84,17 +94,27 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
     STDERR.sync = true
 
     begin
+      socket_file = "#{ENV['XDG_RUNTIME_DIR']}/#{display}"
       IO.popen([ 'sommelier', '--parent', "--socket=#{display}" ], err: [:child, :out]) do |io|
         puts "[somm_wl]: process running with PID #{io.pid}"
         File.write('/tmp/sommelier-wl.pid', io.pid) # write pid to /tmp/sommelier-wl.pid
-        File.write("#{ENV['XDG_RUNTIME_DIR']}/#{display}.lock", 'somm') # add identity string to lock file
+
+        # wait until sommelier ready
+        until File.exist?(socket_file) do
+          sleep(0.1)
+          break if io.eof?
+        end
+
+        # add identity string as socket's xattr (used for checking available display in sommelier.env)
+        system 'setfattr', '-n', 'user.wm', '-v', 'sommelier', socket_file
+
         print "[somm_wl]: #{io.gets}" until io.eof?
         io.close
       end
       puts '[somm_wl]: process exited'
     ensure
-      FileUtils.rm_f [ "#{ENV['XDG_RUNTIME_DIR']}/#{display}", "#{ENV['XDG_RUNTIME_DIR']}/#{display}.lock" ]
-      puts "[somm_wl]: socket #{ENV['XDG_RUNTIME_DIR']}/#{display} removed."
+      FileUtils.rm_f [ socket_file, "#{socket_file}.lock" ]
+      puts "[somm_wl]: socket #{socket_file} removed."
     end
   end
 end
@@ -146,7 +166,7 @@ if $0 =~ /(re)?startsommelier$/ or ARGV[0] =~ /^--(re)?start$/
 elsif $0 =~ /stopsommelier/ or ARGV[0] == '--stop'
   stop_somm
 elsif ARGV[0] == '--log'
-  io = File.open($LOGFILE, 'r')
+  io = File.open($LOGFILE, 'r'); sleep(0.2) until File.exist?($LOGFILE)
   # print daemon output, check and print new outputs repeatedly
   while (sleep 0.2; log = io.read) do
     puts log.gsub(/^(\[.*?\])/, "\e[0;33m\\1\e[0m") unless log.empty?
