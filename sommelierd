@@ -67,7 +67,7 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
       end
       puts '[somm_x11]: process exited'
     ensure
-      FileUtils.rm_f [ socket_file, '/tmp/sommelier-x.display' ]
+      FileUtils.rm_f [ socket_file, *Dir['/tmp/sommelier-x.{display,pid}'] ]
       puts "[somm_x11]: socket #{socket_file} removed."
     end
   end
@@ -101,7 +101,7 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
       end
       puts '[somm_wl]: process exited'
     ensure
-      FileUtils.rm_f [ socket_file, "#{socket_file}.lock", '/tmp/sommelier-wl.display' ]
+      FileUtils.rm_f [ socket_file, "#{socket_file}.lock", *Dir['/tmp/sommelier-wl.{display,pid}'] ]
       puts "[somm_wl]: socket #{socket_file} removed."
     end
   end
