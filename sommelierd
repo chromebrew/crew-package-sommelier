@@ -109,10 +109,10 @@ end
 
 def stop_somm
   # stop_somm: kill sommelier process listed in /tmp/sommelier-*.pid files
-  x_pid = File.read('/tmp/sommelier-x.pid') if File.exist?('/tmp/sommelier-x.pid')
-  wl_pid = File.read('/tmp/sommelier-wl.pid') if File.exist?('/tmp/sommelier-wl.pid')
+  x_pid = ( File.exist?('/tmp/sommelier-x.pid') ) ? File.read('/tmp/sommelier-x.pid') : nil
+  wl_pid = ( File.exist?('/tmp/sommelier-wl.pid') ) ? File.read('/tmp/sommelier-wl.pid') : nil
 
-  [ x_pid, wl_pid ].each do |pid|
+  [ x_pid, wl_pid ].reject(&:nil?).each do |pid|
     begin
       Process.kill('TERM', pid.to_i)
     rescue Errno::ESRCH

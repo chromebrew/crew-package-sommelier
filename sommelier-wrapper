@@ -8,11 +8,33 @@ ARCH="$(uname -m)"
 export XDG_RUNTIME_DIR=/var/run/chrome
 export LD_ARGV0_REL=../bin/sommelier
 
+# get a list of all available DRM render nodes
+DRM_DEVICES_LIST=( /sys/class/drm/renderD* )
+
+# if two or more render nodes available, choose one based on the corresponding render device path:
+#   devices/platform/vegm/...: virtual GEM device provided by Chrome OS, hardware acceleration may not available on this node. (should be avoided)
+#   devices/pci*/...: linked to the actual graphics card device path, provided by graphics card driver. (preferred)
+#
+if [[ "${#DRM_DEVICES_LIST[@]}" > 1 ]]; then
+  for dev in ${DRM_DEVICES_LIST[@]}; do
+    if [[ "$(coreutils --coreutils-prog=readlink -f "${dev}")" =~ devices/pci ]]; then
+      SOMMELIER_DRM_DEVICE="/dev/dri/${dev##*/}"
+      echo -e "\e[1;33m""${#DRM_DEVICES_LIST[@]} DRM devices detected, ${SOMMELIER_DRM_DEVICE} will be used.""\e[0m"
+      break
+    fi
+  done
+else
+  # if only one node available, use it directly
+  SOMMELIER_DRM_DEVICE="${DRM_DEVICES_LIST[0]##*/}"
+fi
+
+export SOMMELIER_DRM_DEVICE
+
 exec /lib${LIB_SUFFIX}/ld-linux-*.so.? \
   --argv0 ${BINDIR}/sommelier \
   --library-path ${BINDIR}/../lib${LIB_SUFFIX} \
   --inhibit-rpath '' \
     ${BINDIR}/sommelier.elf \
       --display=wayland-0 \
-      --drm-device=/dev/dri/renderD128 \
+      --drm-device=${SOMMELIER_DRM_DEVICE} \
       "${@}"
