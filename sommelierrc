@@ -1,4 +1,4 @@
-#!/usr/bin/env -S bash
+#!/usr/bin/env bash
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -12,8 +12,15 @@ set -o pipefail
 
 # Set Xft.dpi. Some applications (e.g. Chrome) use this to detect HiDPI.
 if { command -v xdpyinfo && command -v xrdb; } > /dev/null; then
-  # 1.25x of the DPI reported by xdpyinfo = the DPI reported by xdpyinfo in Crostini
-  DPI="$(( $(xdpyinfo | sed -n -E "/dots per inch/{s|^.* ([0-9]+)x.*$|\\1|g; p}") / 4 * 5 ))"
+  DPI="$(xdpyinfo | sed -n -E "/dots per inch/{s|^.* ([0-9]+)x.*$|\\1|g; p}")"
+
+  if [[ -n "${SOMMELIER_APPLY_DPI_FIX:-}" ]]; then
+    # the DPI returned by xdpyinfo might be incorrect, workaround below fixes the value:
+    # 1.25x of the DPI reported by xdpyinfo = the DPI reported by xdpyinfo in Crostini
+    echo -e "\e[1;34m""Applying DPI fix...""\e[0m"
+    DPI="$(( ${DPI} / 4 * 5 ))"
+  fi
+
   xrdb -merge <<< "Xft.dpi: ${DPI}"
 
   # Set cursor theme
