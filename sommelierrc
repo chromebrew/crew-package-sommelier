@@ -17,6 +17,7 @@ if { command -v xdpyinfo && command -v xrdb; } > /dev/null; then
   if [[ -n "${SOMMELIER_APPLY_DPI_FIX:-}" ]]; then
     # the DPI returned by xdpyinfo might be incorrect, workaround below fixes the value:
     # 1.25x of the DPI reported by xdpyinfo = the DPI reported by xdpyinfo in Crostini
+    echo -e "\e[1;31m""Applying DPI fix...""\e[0m"
     DPI="$(( ${DPI} / 4 * 5 ))"
   fi
 
