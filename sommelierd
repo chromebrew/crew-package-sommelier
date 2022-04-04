@@ -119,6 +119,7 @@ def stop_somm
     end
   end
 
+  sleep 0.5 # ensure the daemon processes have been killed
   puts "sommelier stopped"
 end
 
