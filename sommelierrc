@@ -14,7 +14,7 @@ set -o pipefail
 if { command -v xdpyinfo && command -v xrdb; } > /dev/null; then
   DPI="$(( $(xdpyinfo | sed -n -E "/dots per inch/{s|^.* ([0-9]+)x.*$|\\1|g; p}") / 4 * 5 ))"
 
-  if [[ -n "${SOMMELIER_APPLY_DPI_FIX:-}" ]]; then
+  if [[ -z "${SOMMELIER_APPLY_DPI_FIX:-}" ]]; then
     # the DPI returned by xdpyinfo might be incorrect, workaround below fixes the value:
     # 1.25x of the DPI reported by xdpyinfo = the DPI reported by xdpyinfo in Crostini
     DPI="$(( ${DPI} / 4 * 5 ))"
