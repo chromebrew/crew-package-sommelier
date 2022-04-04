@@ -19,7 +19,7 @@ if [[ "${#DRM_DEVICES_LIST[@]}" > 1 ]]; then
   for dev in ${DRM_DEVICES_LIST[@]}; do
     if [[ "$(coreutils --coreutils-prog=readlink -f "${dev}")" =~ devices/pci ]]; then
       SOMMELIER_DRM_DEVICE="/dev/dri/${dev##*/}"
-      echo -e "\e[1;33m""${#DRM_DEVICES_LIST[@]} DRM devices detected, ${SOMMELIER_DRM_DEVICE} will be used.""\e[0m"
+      echo -e "\e[1;33m""${#DRM_DEVICES_LIST[@]} DRM render nodes available, ${SOMMELIER_DRM_DEVICE} will be used.""\e[0m"
       break
     fi
   done
