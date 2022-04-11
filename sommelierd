@@ -1,4 +1,6 @@
-#!/usr/bin/env -S ruby --disable-all
+#!/usr/bin/env bash
+eval "exec ruby --disable-all -x '${0}' ${@}"
+#!ruby
 require 'fileutils'
 require 'securerandom'
 
