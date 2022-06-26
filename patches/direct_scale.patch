@@ -1,0 +1,1155 @@
+diff -Nur a/BUILD.gn b/BUILD.gn
+--- a/BUILD.gn	2022-06-25 21:57:33.872122780 +0800
++++ b/BUILD.gn	2022-06-25 21:58:10.986124762 +0800
+@@ -50,6 +50,7 @@
+     "protocol/relative-pointer-unstable-v1.xml",
+     "protocol/text-input-unstable-v1.xml",
+     "protocol/viewporter.xml",
++    "protocol/xdg-output-unstable-v1.xml",
+     "protocol/xdg-shell.xml",
+   ]
+ }
+diff -Nur a/meson.build b/meson.build
+--- a/meson.build	2022-06-25 21:57:33.872122780 +0800
++++ b/meson.build	2022-06-25 21:58:10.986124762 +0800
+@@ -47,6 +47,7 @@
+     'protocol/relative-pointer-unstable-v1.xml',
+     'protocol/text-input-unstable-v1.xml',
+     'protocol/viewporter.xml',
++    'protocol/xdg-output-unstable-v1.xml',
+     'protocol/xdg-shell.xml',
+ ]
+ 
+diff -Nur a/protocol/xdg-output-unstable-v1.xml b/protocol/xdg-output-unstable-v1.xml
+--- a/protocol/xdg-output-unstable-v1.xml	1970-01-01 08:00:00.000000000 +0800
++++ b/protocol/xdg-output-unstable-v1.xml	2022-06-25 21:58:10.985124762 +0800
+@@ -0,0 +1,220 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<protocol name="xdg_output_unstable_v1">
++
++  <copyright>
++    Copyright © 2017 Red Hat Inc.
++
++    Permission is hereby granted, free of charge, to any person obtaining a
++    copy of this software and associated documentation files (the "Software"),
++    to deal in the Software without restriction, including without limitation
++    the rights to use, copy, modify, merge, publish, distribute, sublicense,
++    and/or sell copies of the Software, and to permit persons to whom the
++    Software is furnished to do so, subject to the following conditions:
++
++    The above copyright notice and this permission notice (including the next
++    paragraph) shall be included in all copies or substantial portions of the
++    Software.
++
++    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++    DEALINGS IN THE SOFTWARE.
++  </copyright>
++
++  <description summary="Protocol to describe output regions">
++    This protocol aims at describing outputs in a way which is more in line
++    with the concept of an output on desktop oriented systems.
++
++    Some information are more specific to the concept of an output for
++    a desktop oriented system and may not make sense in other applications,
++    such as IVI systems for example.
++
++    Typically, the global compositor space on a desktop system is made of
++    a contiguous or overlapping set of rectangular regions.
++
++    Some of the information provided in this protocol might be identical
++    to their counterparts already available from wl_output, in which case
++    the information provided by this protocol should be preferred to their
++    equivalent in wl_output. The goal is to move the desktop specific
++    concepts (such as output location within the global compositor space,
++    the connector name and types, etc.) out of the core wl_output protocol.
++
++    Warning! The protocol described in this file is experimental and
++    backward incompatible changes may be made. Backward compatible
++    changes may be added together with the corresponding interface
++    version bump.
++    Backward incompatible changes are done by bumping the version
++    number in the protocol and interface names and resetting the
++    interface version. Once the protocol is to be declared stable,
++    the 'z' prefix and the version number in the protocol and
++    interface names are removed and the interface version number is
++    reset.
++  </description>
++
++  <interface name="zxdg_output_manager_v1" version="3">
++    <description summary="manage xdg_output objects">
++      A global factory interface for xdg_output objects.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the xdg_output_manager object">
++	Using this request a client can tell the server that it is not
++	going to use the xdg_output_manager object anymore.
++
++	Any objects already created through this instance are not affected.
++      </description>
++    </request>
++
++    <request name="get_xdg_output">
++      <description summary="create an xdg output from a wl_output">
++	This creates a new xdg_output object for the given wl_output.
++      </description>
++      <arg name="id" type="new_id" interface="zxdg_output_v1"/>
++      <arg name="output" type="object" interface="wl_output"/>
++    </request>
++  </interface>
++
++  <interface name="zxdg_output_v1" version="3">
++    <description summary="compositor logical output region">
++      An xdg_output describes part of the compositor geometry.
++
++      This typically corresponds to a monitor that displays part of the
++      compositor space.
++
++      For objects version 3 onwards, after all xdg_output properties have been
++      sent (when the object is created and when properties are updated), a
++      wl_output.done event is sent. This allows changes to the output
++      properties to be seen as atomic, even if they happen via multiple events.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the xdg_output object">
++	Using this request a client can tell the server that it is not
++	going to use the xdg_output object anymore.
++      </description>
++    </request>
++
++    <event name="logical_position">
++      <description summary="position of the output within the global compositor space">
++	The position event describes the location of the wl_output within
++	the global compositor space.
++
++	The logical_position event is sent after creating an xdg_output
++	(see xdg_output_manager.get_xdg_output) and whenever the location
++	of the output changes within the global compositor space.
++      </description>
++      <arg name="x" type="int"
++	   summary="x position within the global compositor space"/>
++      <arg name="y" type="int"
++	   summary="y position within the global compositor space"/>
++    </event>
++
++    <event name="logical_size">
++      <description summary="size of the output in the global compositor space">
++	The logical_size event describes the size of the output in the
++	global compositor space.
++
++	For example, a surface without any buffer scale, transformation
++	nor rotation set, with the size matching the logical_size will
++	have the same size as the corresponding output when displayed.
++
++	Most regular Wayland clients should not pay attention to the
++	logical size and would rather rely on xdg_shell interfaces.
++
++	Some clients such as Xwayland, however, need this to configure
++	their surfaces in the global compositor space as the compositor
++	may apply a different scale from what is advertised by the output
++	scaling property (to achieve fractional scaling, for example).
++
++	For example, for a wl_output mode 3840×2160 and a scale factor 2:
++
++	- A compositor not scaling the surface buffers will advertise a
++	  logical size of 3840×2160,
++
++	- A compositor automatically scaling the surface buffers will
++	  advertise a logical size of 1920×1080,
++
++	- A compositor using a fractional scale of 1.5 will advertise a
++	  logical size of 2560×1440.
++
++	For example, for a wl_output mode 1920×1080 and a 90 degree rotation,
++	the compositor will advertise a logical size of 1080x1920.
++
++	The logical_size event is sent after creating an xdg_output
++	(see xdg_output_manager.get_xdg_output) and whenever the logical
++	size of the output changes, either as a result of a change in the
++	applied scale or because of a change in the corresponding output
++	mode(see wl_output.mode) or transform (see wl_output.transform).
++      </description>
++      <arg name="width" type="int"
++	   summary="width in global compositor space"/>
++      <arg name="height" type="int"
++	   summary="height in global compositor space"/>
++    </event>
++
++    <event name="done">
++      <description summary="all information about the output have been sent">
++	This event is sent after all other properties of an xdg_output
++	have been sent.
++
++	This allows changes to the xdg_output properties to be seen as
++	atomic, even if they happen via multiple events.
++
++	For objects version 3 onwards, this event is deprecated. Compositors
++	are not required to send it anymore and must send wl_output.done
++	instead.
++      </description>
++    </event>
++
++    <!-- Version 2 additions -->
++
++    <event name="name" since="2">
++      <description summary="name of this output">
++	Many compositors will assign names to their outputs, show them to the
++	user, allow them to be configured by name, etc. The client may wish to
++	know this name as well to offer the user similar behaviors.
++
++	The naming convention is compositor defined, but limited to
++	alphanumeric characters and dashes (-). Each name is unique among all
++	wl_output globals, but if a wl_output global is destroyed the same name
++	may be reused later. The names will also remain consistent across
++	sessions with the same hardware and software configuration.
++
++	Examples of names include 'HDMI-A-1', 'WL-1', 'X11-1', etc. However, do
++	not assume that the name is a reflection of an underlying DRM
++	connector, X11 connection, etc.
++
++	The name event is sent after creating an xdg_output (see
++	xdg_output_manager.get_xdg_output). This event is only sent once per
++	xdg_output, and the name does not change over the lifetime of the
++	wl_output global.
++      </description>
++      <arg name="name" type="string" summary="output name"/>
++    </event>
++
++    <event name="description" since="2">
++      <description summary="human-readable description of this output">
++	Many compositors can produce human-readable descriptions of their
++	outputs.  The client may wish to know this description as well, to
++	communicate the user for various purposes.
++
++	The description is a UTF-8 string with no convention defined for its
++	contents. Examples might include 'Foocorp 11" Display' or 'Virtual X11
++	output via :1'.
++
++	The description event is sent after creating an xdg_output (see
++	xdg_output_manager.get_xdg_output) and whenever the description
++	changes. The description is optional, and may not be sent at all.
++
++	For objects of version 2 and lower, this event is only sent once per
++	xdg_output, and the description does not change over the lifetime of
++	the wl_output global.
++      </description>
++      <arg name="description" type="string" summary="output description"/>
++    </event>
++
++  </interface>
++</protocol>
+diff -Nur a/scripts/get_frame_summary.py b/scripts/get_frame_summary.py
+--- a/scripts/get_frame_summary.py	2022-06-25 21:57:33.873122780 +0800
++++ b/scripts/get_frame_summary.py	1970-01-01 08:00:00.000000000 +0800
+@@ -1,129 +0,0 @@
+-#!/usr/bin/env python3
+-# Copyright 2022 The ChromiumOS Authors.
+-# Use of this source code is governed by a BSD-style license that can be
+-# found in the LICENSE file.
+-"""Summarizes Sommelier timing information."""
+-
+-import argparse
+-from enum import Enum
+-from typing import NamedTuple
+-
+-
+-_MS_IN_SEC = 1000
+-_US_IN_SEC = 1000000
+-
+-
+-class EventType(Enum):
+-    """Wayland event type."""
+-    COMMIT = 1
+-    ATTACH = 2
+-    RELEASE = 3
+-    UNKNOWN = 4
+-
+-
+-class EventInfo(NamedTuple):
+-    """Stores information of an event."""
+-    event_type: EventType
+-    surface_id: int
+-    buffer_id: int
+-    time: float
+-
+-def parse_event_type(event_type):
+-    EVENT_MAP = {
+-        'a': EventType.ATTACH,
+-        'c': EventType.COMMIT,
+-        'r': EventType.RELEASE,
+-    }
+-    return EVENT_MAP.get(event_type, EventType.UNKNOWN)
+-
+-
+-class FrameLog():
+-    """Manages access to the Sommelier timing logs."""
+-
+-    def __init__(self, filename):
+-        """Parse Sommelier timing log.
+-
+-        Format of log (header line might be truncated):
+-        Type Surface_ID Buffer_ID Delta_Time   # header line 1
+-        a 12 20 4237.44                        # line 2
+-        ....
+-        EndTime 3972 1655330324.7              # last line
+-        Last line format: (EndTime, last event id, time since epoch (s))
+-        """
+-        self.frame_log = []
+-        self.surfaces = set()
+-        with open(filename, 'r') as f:
+-            lines = f.read().splitlines()
+-            total_delta_time = 0
+-            last_line = lines[-1].split(' ')
+-            if len(last_line) != 3 or last_line[0] != 'EndTime':
+-                print(f'Invalid EndTime: {lines[-1]}')
+-                return
+-            self.end_time = float(last_line[2])
+-            for l in reversed(lines[1:-1]):
+-                line = l.rstrip().split(' ')
+-                # Skip parsing line that is improperly formatted
+-                if len(line) != 4:
+-                    continue
+-                total_delta_time += float(line[3]) / _US_IN_SEC
+-                surface_id = int(line[1])
+-                info = EventInfo(
+-                    event_type=parse_event_type(line[0]),
+-                    surface_id=surface_id,
+-                    buffer_id=int(line[2]),
+-                    time=self.end_time - total_delta_time
+-                )
+-                self.frame_log.append(info)
+-                self.surfaces.add(surface_id)
+-
+-    def output_fps(self, windows):
+-        """Outputs the summarized fps information based on frame log.
+-
+-        Args:
+-            windows: List of time windows (in seconds) to summarize.
+-        """
+-        for surface in self.surfaces:
+-            print(f'Summary for surface {surface}')
+-            max_frame_time = 0
+-            win = windows[:]
+-            # only check for commit events on the given surface
+-            # events are in reverse chronological order
+-            events = [e for e in self.frame_log if e.surface_id ==
+-                      surface and e.event_type == EventType.COMMIT]
+-            if not events:
+-                print(f'No commit events found for surface {surface}\n')
+-                continue
+-            prev_time = self.end_time
+-            for i, event in enumerate(events):
+-                max_frame_time = max(
+-                    max_frame_time, prev_time - event.time)
+-                for w in win:
+-                    if self.end_time - event.time > w:
+-                        print(
+-                            f'FPS (last {w}s): '
+-                            f'{(i+1) / (self.end_time - event.time)}')
+-                        print(
+-                            f'Max frame time (last {w}s): '
+-                            f'{max_frame_time * _MS_IN_SEC}')
+-                        print(f'Frame count (last {w}s): {i+1}')
+-                win = [w for w in win if self.end_time - event.time <= w]
+-                prev_time = event.time
+-            print(
+-                f'FPS (all time): '
+-                f'{len(events) / (self.end_time - events[-1].time)}')
+-            print(
+-                f'Max frame time (all time): {max_frame_time * _MS_IN_SEC}')
+-            print(f'Total frame count: {len(events)}\n')
+-
+-
+-if __name__ == '__main__':
+-    parser = argparse.ArgumentParser(
+-        description='Return frame summary based on Sommelier timing log.')
+-
+-    parser.add_argument('file', help='Filename of timing log')
+-    parser.add_argument('--windows', action='extend', type=int,
+-                        nargs='+', help='Time windows for summary (in seconds)',
+-                        default=[10, 60, 300])
+-    args = parser.parse_args()
+-    log = FrameLog(args.file)
+-    log.output_fps(windows=sorted(args.windows))
+diff -Nur a/sommelier.cc b/sommelier.cc
+--- a/sommelier.cc	2022-06-25 21:57:33.875122780 +0800
++++ b/sommelier.cc	2022-06-25 21:58:10.986124762 +0800
+@@ -42,6 +42,7 @@
+ #include "relative-pointer-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+ #include "text-input-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+ #include "viewporter-client-protocol.h"  // NOLINT(build/include_directory)
++#include "xdg-output-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+ #include "xdg-shell-client-protocol.h"   // NOLINT(build/include_directory)
+ 
+ // Check that required macro definitions exist.
+@@ -667,6 +668,18 @@
+     assert(!ctx->gaming_input_manager);
+     ctx->gaming_input_manager = gaming_input_manager;
+ #endif
++  } else if (strcmp(interface, "zxdg_output_manager_v1") == 0) {
++    struct sl_xdg_output_manager* output_manager =
++        static_cast<sl_xdg_output_manager*>(
++            malloc(sizeof(struct sl_xdg_output_manager)));
++    assert(output_manager);
++
++    output_manager->ctx = ctx;
++    output_manager->id = id;
++    output_manager->internal =
++        static_cast<zxdg_output_manager_v1*>(wl_registry_bind(
++            registry, id, &zxdg_output_manager_v1_interface, MIN(3, version)));
++    ctx->xdg_output_manager = output_manager;
+   }
+ }
+ 
+@@ -2912,33 +2925,34 @@
+ static void sl_calculate_scale_for_xwayland(struct sl_context* ctx) {
+   struct sl_host_output* output;
+   double default_scale_factor = 1.0;
+-  double scale;
++  double scale = ctx->desired_scale;
+ 
+-  // Find internal output and determine preferred scale factor.
+-  wl_list_for_each(output, &ctx->host_outputs, link) {
+-    if (output->internal) {
+-      double preferred_scale =
+-          sl_output_aura_scale_factor_to_double(output->preferred_scale);
+-
+-      if (ctx->aura_shell) {
+-        double device_scale_factor =
+-            sl_output_aura_scale_factor_to_double(output->device_scale_factor);
++  if (!ctx->use_direct_scale) {
++    // Find internal output and determine preferred scale factor.
++    wl_list_for_each(output, &ctx->host_outputs, link) {
++      if (output->internal) {
++        double preferred_scale =
++            sl_output_aura_scale_factor_to_double(output->preferred_scale);
++
++        if (ctx->aura_shell) {
++          double device_scale_factor = sl_output_aura_scale_factor_to_double(
++              output->device_scale_factor);
+ 
+-        default_scale_factor = device_scale_factor * preferred_scale;
++          default_scale_factor = device_scale_factor * preferred_scale;
++        }
++        break;
+       }
+-      break;
+     }
++    // We use the default scale factor multiplied by desired scale set by the
++    // user. This gives us HiDPI support by default but the user can still
++    // adjust it if higher or lower density is preferred.
++    scale = ctx->desired_scale * default_scale_factor;
++
++    // Round to integer scale if wp_viewporter interface is not present.
++    if (!ctx->viewporter)
++      scale = round(scale);
+   }
+ 
+-  // We use the default scale factor multipled by desired scale set by the
+-  // user. This gives us HiDPI support by default but the user can still
+-  // adjust it if higher or lower density is preferred.
+-  scale = ctx->desired_scale * default_scale_factor;
+-
+-  // Round to integer scale if wp_viewporter interface is not present.
+-  if (!ctx->viewporter)
+-    scale = round(scale);
+-
+   // Clamp and set scale.
+   ctx->scale = MIN(MAX_SCALE, MAX(MIN_SCALE, scale));
+ 
+@@ -3089,6 +3103,7 @@
+       "  --drm-device=DEVICE\t\tDRM device to use\n"
+       "  --glamor\t\t\tUse glamor to accelerate X11 clients\n"
+       "  --timing-filename=PATH\tPath to timing output log\n"
++      "  --direct-scale\tEnable direct scaling mode"
+ #ifdef PERFETTO_TRACING
+       "  --trace-filename=PATH\t\tPath to Perfetto trace filename\n"
+       "  --trace-system\t\tPerfetto trace to system daemon\n"
+@@ -3171,6 +3186,8 @@
+       xwayland_cmd_prefix = sl_arg_value(arg);
+     } else if (strstr(arg, "--client-fd") == arg) {
+       client_fd = atoi(sl_arg_value(arg));
++    } else if (strstr(arg, "--direct-scale") == arg) {
++      ctx.use_direct_scale = true;
+     } else if (strstr(arg, "--scale") == arg) {
+       scale = sl_arg_value(arg);
+     } else if (strstr(arg, "--dpi") == arg) {
+@@ -3371,6 +3388,7 @@
+           char* arg = argv[j];
+           if (strstr(arg, "--display") == arg ||
+               strstr(arg, "--scale") == arg ||
++              strstr(arg, "--direct-scale") == arg ||
+               strstr(arg, "--accelerators") == arg ||
+               strstr(arg, "--drm-device") == arg ||
+               strstr(arg, "--support-damage-buffer") == arg) {
+@@ -3408,7 +3426,13 @@
+   if (scale) {
+     ctx.desired_scale = atof(scale);
+     // Round to integer scale until we detect wp_viewporter support.
+-    ctx.scale = MIN(MAX_SCALE, MAX(MIN_SCALE, round(ctx.desired_scale)));
++    // In direct scale mode, take the scale value as is.
++
++    if (ctx.use_direct_scale) {
++      ctx.scale = ctx.desired_scale;
++    } else {
++      ctx.scale = MIN(MAX_SCALE, MAX(MIN_SCALE, round(ctx.desired_scale)));
++    }
+   }
+ 
+   if (!frame_color)
+diff -Nur a/sommelier-ctx.cc b/sommelier-ctx.cc
+--- a/sommelier-ctx.cc	2022-06-25 21:57:33.873122780 +0800
++++ b/sommelier-ctx.cc	2022-06-25 21:58:10.986124762 +0800
+@@ -111,6 +111,7 @@
+   ctx->linux_dmabuf = NULL;
+   ctx->keyboard_extension = NULL;
+   ctx->text_input_manager = NULL;
++  ctx->xdg_output_manager = NULL;
+ #ifdef GAMEPAD_SUPPORT
+   ctx->gaming_input_manager = NULL;
+ #endif
+@@ -142,6 +143,10 @@
+   ctx->needs_set_input_focus = 0;
+   ctx->desired_scale = 1.0;
+   ctx->scale = 1.0;
++  ctx->virt_scale_x = 1.0;
++  ctx->virt_scale_y = 1.0;
++  ctx->xdg_scale_x = 1.0;
++  ctx->xdg_scale_y = 1.0;
+   ctx->application_id = NULL;
+   ctx->application_id_property_name = NULL;
+   ctx->exit_with_child = 1;
+@@ -176,6 +181,7 @@
+   ctx->timing = NULL;
+   ctx->trace_filename = NULL;
+   ctx->trace_system = false;
++  ctx->use_direct_scale = false;
+ 
+   wl_list_init(&ctx->accelerators);
+   wl_list_init(&ctx->registries);
+diff -Nur a/sommelier-ctx.h b/sommelier-ctx.h
+--- a/sommelier-ctx.h	2022-06-25 21:57:33.873122780 +0800
++++ b/sommelier-ctx.h	2022-06-25 21:58:10.986124762 +0800
+@@ -77,6 +77,7 @@
+   struct sl_linux_explicit_synchronization* linux_explicit_synchronization;
+   struct sl_keyboard_extension* keyboard_extension;
+   struct sl_text_input_manager* text_input_manager;
++  struct sl_xdg_output_manager* xdg_output_manager;
+ #ifdef GAMEPAD_SUPPORT
+   struct sl_gaming_input_manager* gaming_input_manager;
+ #endif
+@@ -122,6 +123,14 @@
+   double desired_scale;
+   double scale;
+ 
++  // These scale factors are used for the direct scaling mode.
++  // These factors are set to the values computed from the internal/default
++  // display.
++  // See sommelier-transform.h and the definition in sl_output
++  // for more details on this.
++  double virt_scale_x, virt_scale_y;
++  double xdg_scale_x, xdg_scale_y;
++
+   // If non-null, all X11 client apps will be given this application ID.
+   const char* application_id;
+ 
+@@ -171,6 +180,7 @@
+   bool trace_system;
+   bool use_explicit_fence;
+   bool use_virtgpu_channel;
++  bool use_direct_scale;
+   // Never freed after allocation due the fact sommelier doesn't have a
+   // shutdown function yet.
+   WaylandChannel* channel;
+diff -Nur a/sommelier.h b/sommelier.h
+--- a/sommelier.h	2022-06-25 21:57:33.875122780 +0800
++++ b/sommelier.h	2022-06-25 21:58:10.986124762 +0800
+@@ -47,6 +47,7 @@
+ struct sl_window;
+ struct zaura_shell;
+ struct zcr_keyboard_extension_v1;
++struct zxdg_output_manager_v1;
+ 
+ #ifdef GAMEPAD_SUPPORT
+ struct sl_gamepad;
+@@ -189,10 +190,18 @@
+   struct wl_list link;
+ };
+ 
++struct sl_xdg_output_manager {
++  struct sl_context* ctx;
++  uint32_t id;
++  uint32_t version;
++  struct zxdg_output_manager_v1* internal;
++};
++
+ struct sl_host_output {
+   struct sl_context* ctx;
+   struct wl_resource* resource;
+   struct wl_output* proxy;
++  struct zxdg_output_v1* zxdg_output;
+   struct zaura_output* aura_output;
+   int internal;
+   int x;
+@@ -212,6 +221,28 @@
+   int preferred_scale;
+   int device_scale_factor;
+   int expecting_scale;
++  bool expecting_logical_size;
++
++  // The scaling factors for direct mode
++  // virt_scale: Used to translate from physical space to virtual space
++  // xdg_scale: Used to translate from virtual space to logical space
++  //
++  // The logical space is defined by the host. It will be retrieved through
++  // the xdg_output_manager interface.
++  //
++  // All spaces, and by consequence all scale factors, will be unique to each
++  // particular output.
++  //
++  // For more details, see sommelier-transform.h
++
++  double virt_scale_x;
++  double virt_scale_y;
++  double xdg_scale_x;
++  double xdg_scale_y;
++  int32_t logical_width;
++  int32_t logical_height;
++  int32_t logical_x;
++  int32_t logical_y;
+   struct wl_list link;
+ };
+ 
+diff -Nur a/sommelier-output.cc b/sommelier-output.cc
+--- a/sommelier-output.cc	2022-06-25 21:57:33.874122780 +0800
++++ b/sommelier-output.cc	2022-06-25 21:58:10.986124762 +0800
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+-#include "sommelier.h"  // NOLINT(build/include_directory)
++#include "sommelier.h"            // NOLINT(build/include_directory)
++#include "sommelier-transform.h"  // NOLINT(build/include_directory)
+ 
+ #include <assert.h>
+ #include <stdlib.h>
+@@ -10,6 +11,7 @@
+ #include <wayland-client.h>
+ 
+ #include "aura-shell-client-protocol.h"  // NOLINT(build/include_directory)
++#include "xdg-output-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+ 
+ #define MAX_OUTPUT_SCALE 2
+ 
+@@ -129,7 +131,66 @@
+   }
+ }
+ 
+-void sl_output_send_host_output_state(struct sl_host_output* host) {
++void sl_output_init_dimensions_direct(struct sl_host_output* host,
++                                      int* out_scale,
++                                      int* out_physical_width,
++                                      int* out_physical_height,
++                                      int* out_width,
++                                      int* out_height) {
++  int32_t virtual_width = host->width;
++  int32_t virtual_height = host->height;
++
++  // This requires xdg_output_manager, it is assumed that it will be
++  // available and we will have an appropriate set of logical dimensions
++  // for this particular output.
++  assert(host->ctx->viewporter);
++  assert(host->ctx->xdg_output_manager);
++
++  // The virtual width/height is computed by this function here based
++  // on the physical width/height
++  sl_transform_output_dimensions(host->ctx, &virtual_width, &virtual_height);
++
++  host->virt_scale_x = static_cast<double>(virtual_width) / host->width;
++  host->virt_scale_y = static_cast<double>(virtual_height) / host->height;
++
++  *out_width = virtual_width;
++  *out_height = virtual_height;
++
++  // Force the scale to 1
++  //
++  // This is reported to the guest through the wl_output protocol.
++  // This value will signal by how much a compositor will upscale
++  // all buffers by (1 is no scale).
++  *out_scale = 1;
++
++  // The physical dimensions (in mm) are the same, regardless
++  // of the provided scale factor.
++  *out_physical_width = host->physical_width;
++  *out_physical_height = host->physical_height;
++
++  // We want to be able to transform from virtual to XDG logical
++  // coordinates
++  // Virt to XDG -> div
++  // XDG to Virt -> mul
++  host->xdg_scale_x = static_cast<double>(virtual_width) /
++                      static_cast<double>(host->logical_width);
++  host->xdg_scale_y = static_cast<double>(virtual_height) /
++                      static_cast<double>(host->logical_height);
++
++  if (host->internal) {
++    host->ctx->virt_scale_x = host->virt_scale_x;
++    host->ctx->virt_scale_y = host->virt_scale_y;
++    host->ctx->xdg_scale_x = host->xdg_scale_x;
++    host->ctx->xdg_scale_y = host->xdg_scale_y;
++  }
++}
++
++void sl_output_get_dimensions_original(struct sl_host_output* host,
++                                       int* out_scale,
++                                       int* out_physical_width,
++                                       int* out_physical_height,
++                                       int* out_width,
++                                       int* out_height) {
+   int scale;
+   int physical_width;
+   int physical_height;
+@@ -161,6 +222,28 @@
+     }
+   }
+ 
++  *out_scale = scale;
++  *out_physical_width = physical_width;
++  *out_physical_height = physical_height;
++  *out_width = width;
++  *out_height = height;
++}
++
++void sl_output_send_host_output_state(struct sl_host_output* host) {
++  int scale;
++  int physical_width;
++  int physical_height;
++  int width;
++  int height;
++
++  if (host->ctx->use_direct_scale) {
++    sl_output_init_dimensions_direct(host, &scale, &physical_width,
++                                     &physical_height, &width, &height);
++  } else {
++    sl_output_get_dimensions_original(host, &scale, &physical_width,
++                                      &physical_height, &width, &height);
++  }
++
+   // X/Y are best left at origin as managed X windows are kept centered on
+   // the root window. The result is that all outputs are overlapping and
+   // pointer events can always be dispatched to the visible region of the
+@@ -298,6 +381,42 @@
+   free(host);
+ }
+ 
++static void sl_xdg_output_logical_position(
++    void* data, struct zxdg_output_v1* zxdg_output_v1, int32_t x, int32_t y) {
++  struct sl_host_output* host = static_cast<sl_host_output*>(
++      zxdg_output_v1_get_user_data(zxdg_output_v1));
++  host->logical_y = y;
++  host->logical_x = x;
++}
++
++static void sl_xdg_output_logical_size(void* data,
++                                       struct zxdg_output_v1* zxdg_output_v1,
++                                       int32_t width,
++                                       int32_t height) {
++  struct sl_host_output* host = static_cast<sl_host_output*>(
++      zxdg_output_v1_get_user_data(zxdg_output_v1));
++
++  host->logical_width = width;
++  host->logical_height = height;
++
++  host->expecting_logical_size = false;
++}
++
++static void sl_xdg_output_done(void* data,
++                               struct zxdg_output_v1* zxdg_output_v1) {}
++
++static void sl_xdg_output_name(void* data,
++                               struct zxdg_output_v1* zxdg_output_v1,
++                               const char* name) {}
++
++static void sl_xdg_output_desc(void* data,
++                               struct zxdg_output_v1* zxdg_output_v1,
++                               const char* desc) {}
++
++static const struct zxdg_output_v1_listener sl_xdg_output_listener = {
++    sl_xdg_output_logical_position, sl_xdg_output_logical_size,
++    sl_xdg_output_done, sl_xdg_output_name, sl_xdg_output_desc};
++
+ static void sl_bind_host_output(struct wl_client* client,
+                                 void* data,
+                                 uint32_t version,
+@@ -322,6 +441,8 @@
+   host->internal = wl_list_empty(&ctx->host_outputs);
+   host->x = 0;
+   host->y = 0;
++  host->logical_x = 0;
++  host->logical_y = 0;
+   host->physical_width = 0;
+   host->physical_height = 0;
+   host->subpixel = WL_OUTPUT_SUBPIXEL_UNKNOWN;
+@@ -331,12 +452,15 @@
+   host->flags = 0;
+   host->width = 1024;
+   host->height = 768;
++  host->logical_width = 1024;
++  host->logical_height = 768;
+   host->refresh = 60000;
+   host->scale_factor = 1;
+   host->current_scale = 1000;
+   host->preferred_scale = 1000;
+   host->device_scale_factor = 1000;
+   host->expecting_scale = 0;
++  host->expecting_logical_size = false;
+   wl_list_insert(ctx->host_outputs.prev, &host->link);
+   if (ctx->aura_shell) {
+     host->expecting_scale = 1;
+@@ -347,6 +471,15 @@
+     zaura_output_add_listener(host->aura_output, &sl_aura_output_listener,
+                               host);
+   }
++
++  if (ctx->xdg_output_manager) {
++    host->expecting_logical_size = true;
++    host->zxdg_output = zxdg_output_manager_v1_get_xdg_output(
++        ctx->xdg_output_manager->internal, host->proxy);
++    zxdg_output_v1_set_user_data(host->zxdg_output, host);
++    zxdg_output_v1_add_listener(host->zxdg_output, &sl_xdg_output_listener,
++                                host);
++  }
+ }
+ 
+ struct sl_global* sl_output_global_create(struct sl_output* output) {
+diff -Nur a/sommelier-transform.cc b/sommelier-transform.cc
+--- a/sommelier-transform.cc	2022-06-25 21:57:33.874122780 +0800
++++ b/sommelier-transform.cc	2022-06-25 21:58:10.986124762 +0800
+@@ -7,15 +7,97 @@
+ #include "sommelier-tracing.h"    // NOLINT(build/include_directory)
+ #include "sommelier-transform.h"  // NOLINT(build/include_directory)
+ 
++static double sl_transform_direct_axis_scale(struct sl_context* ctx,
++                                             uint32_t axis) {
++  return (axis == 0) ? ctx->xdg_scale_y : ctx->xdg_scale_x;
++}
++
++static void sl_transform_direct_to_host_damage(int64_t* x,
++                                               int64_t* y,
++                                               double scale_x,
++                                               double scale_y) {
++  double xwhole = trunc(static_cast<double>(*x) / scale_x);
++  double ywhole = trunc(static_cast<double>(*y) / scale_y);
++
++  *x = static_cast<int64_t>(xwhole);
++  *y = static_cast<int64_t>(ywhole);
++}
++
++static void sl_transform_direct_to_guest_fixed(struct sl_context* ctx,
++                                               wl_fixed_t* coord,
++                                               uint32_t axis) {
++  double scale = sl_transform_direct_axis_scale(ctx, axis);
++  double result = wl_fixed_to_double(*coord) * scale;
++
++  *coord = wl_fixed_from_double(result);
++}
++
++static void sl_transform_direct_to_guest_fixed(struct sl_context* ctx,
++                                               wl_fixed_t* x,
++                                               wl_fixed_t* y) {
++  double resultx = wl_fixed_to_double(*x) * ctx->xdg_scale_x;
++  double resulty = wl_fixed_to_double(*y) * ctx->xdg_scale_y;
++
++  *x = wl_fixed_from_double(resultx);
++  *y = wl_fixed_from_double(resulty);
++}
++
++static void sl_transform_direct_to_host_fixed(struct sl_context* ctx,
++                                              wl_fixed_t* coord,
++                                              uint32_t axis) {
++  double scale = sl_transform_direct_axis_scale(ctx, axis);
++  double result = wl_fixed_to_double(*coord) / scale;
++
++  *coord = wl_fixed_from_double(result);
++}
++
++static void sl_transform_direct_to_host_fixed(struct sl_context* ctx,
++                                              wl_fixed_t* x,
++                                              wl_fixed_t* y) {
++  double resultx = wl_fixed_to_double(*x) / ctx->xdg_scale_x;
++  double resulty = wl_fixed_to_double(*y) / ctx->xdg_scale_y;
++
++  *x = wl_fixed_from_double(resultx);
++  *y = wl_fixed_from_double(resulty);
++}
++
++static void sl_transform_direct_to_guest(struct sl_context* ctx,
++                                         int32_t* x,
++                                         int32_t* y) {
++  double xwhole = trunc(ctx->xdg_scale_x * static_cast<double>(*x));
++  double ywhole = trunc(ctx->xdg_scale_y * static_cast<double>(*y));
++
++  *x = static_cast<int32_t>(xwhole);
++  *y = static_cast<int32_t>(ywhole);
++}
++
++static void sl_transform_direct_to_host(struct sl_context* ctx,
++                                        int32_t* x,
++                                        int32_t* y) {
++  double xwhole = trunc(static_cast<double>(*x) / ctx->xdg_scale_x);
++  double ywhole = trunc(static_cast<double>(*y) / ctx->xdg_scale_y);
++
++  *x = static_cast<int32_t>(xwhole);
++  *y = static_cast<int32_t>(ywhole);
++}
++
+ bool sl_transform_viewport_scale(struct sl_context* ctx,
+                                  double contents_scale,
+                                  int32_t* width,
+                                  int32_t* height) {
+   double scale = ctx->scale * contents_scale;
++
++  // TODO(mrisaacb): It may be beneficial to skip the set_destination call
++  // when the virtual and logical space match.
+   bool do_viewport = true;
+ 
+-  *width = ceil(*width / scale);
+-  *height = ceil(*height / scale);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_host(ctx, width, height);
++  } else {
++    *width = ceil(*width / scale);
++    *height = ceil(*height / scale);
++  }
++
+   return do_viewport;
+ }
+ 
+@@ -29,68 +111,104 @@
+   double sx = scalex * ctx->scale;
+   double sy = scaley * ctx->scale;
+ 
+-  // Enclosing rect after scaling and outset by one pixel to account for
+-  // potential filtering.
+-  *x1 = MAX(MIN_SIZE, (*x1) - 1) / sx;
+-  *y1 = MAX(MIN_SIZE, (*y1) - 1) / sy;
+-  *x2 = ceil(MIN((*x2) + 1, MAX_SIZE) / sx);
+-  *y2 = ceil(MIN((*y2) + 1, MAX_SIZE) / sy);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_host_damage(x1, y1, sx, sy);
++    sl_transform_direct_to_host_damage(x2, y2, sx, sy);
++  } else {
++    // Enclosing rect after scaling and outset by one pixel to account for
++    // potential filtering.
++    *x1 = MAX(MIN_SIZE, (*x1) - 1) / sx;
++    *y1 = MAX(MIN_SIZE, (*y1) - 1) / sy;
++    *x2 = ceil(MIN((*x2) + 1, MAX_SIZE) / sx);
++    *y2 = ceil(MIN((*y2) + 1, MAX_SIZE) / sy);
++  }
+ }
+ 
+ void sl_transform_host_to_guest(struct sl_context* ctx,
+                                 int32_t* x,
+                                 int32_t* y) {
+-  (*x) *= ctx->scale;
+-  (*y) *= ctx->scale;
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_guest(ctx, x, y);
++  } else {
++    (*x) *= ctx->scale;
++    (*y) *= ctx->scale;
++  }
+ }
+ 
+ void sl_transform_host_to_guest_fixed(struct sl_context* ctx,
+                                       wl_fixed_t* x,
+                                       wl_fixed_t* y) {
+-  double dx = wl_fixed_to_double(*x);
+-  double dy = wl_fixed_to_double(*y);
+-
+-  dx *= ctx->scale;
+-  dy *= ctx->scale;
+-
+-  *x = wl_fixed_from_double(dx);
+-  *y = wl_fixed_from_double(dy);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_guest_fixed(ctx, x, y);
++  } else {
++    double dx = wl_fixed_to_double(*x);
++    double dy = wl_fixed_to_double(*y);
++
++    dx *= ctx->scale;
++    dy *= ctx->scale;
++
++    *x = wl_fixed_from_double(dx);
++    *y = wl_fixed_from_double(dy);
++  }
+ }
+ 
+ void sl_transform_host_to_guest_fixed(struct sl_context* ctx,
+                                       wl_fixed_t* coord,
+                                       uint32_t axis) {
+-  double dx = wl_fixed_to_double(*coord);
+-
+-  dx *= ctx->scale;
+-  *coord = wl_fixed_from_double(dx);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_guest_fixed(ctx, coord, axis);
++  } else {
++    double dx = wl_fixed_to_double(*coord);
++
++    dx *= ctx->scale;
++    *coord = wl_fixed_from_double(dx);
++  }
+ }
+ 
+ void sl_transform_guest_to_host(struct sl_context* ctx,
+                                 int32_t* x,
+                                 int32_t* y) {
+-  (*x) /= ctx->scale;
+-  (*y) /= ctx->scale;
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_host(ctx, x, y);
++  } else {
++    (*x) /= ctx->scale;
++    (*y) /= ctx->scale;
++  }
+ }
+ 
+ void sl_transform_guest_to_host_fixed(struct sl_context* ctx,
+                                       wl_fixed_t* x,
+                                       wl_fixed_t* y) {
+-  double dx = wl_fixed_to_double(*x);
+-  double dy = wl_fixed_to_double(*y);
+-
+-  dx /= ctx->scale;
+-  dy /= ctx->scale;
+-
+-  *x = wl_fixed_from_double(dx);
+-  *y = wl_fixed_from_double(dy);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_host_fixed(ctx, x, y);
++  } else {
++    double dx = wl_fixed_to_double(*x);
++    double dy = wl_fixed_to_double(*y);
++
++    dx /= ctx->scale;
++    dy /= ctx->scale;
++
++    *x = wl_fixed_from_double(dx);
++    *y = wl_fixed_from_double(dy);
++  }
+ }
+ 
+ void sl_transform_guest_to_host_fixed(struct sl_context* ctx,
+                                       wl_fixed_t* coord,
+                                       uint32_t axis) {
+-  double dx = wl_fixed_to_double(*coord);
++  if (ctx->use_direct_scale) {
++    sl_transform_direct_to_host_fixed(ctx, coord, axis);
++  } else {
++    double dx = wl_fixed_to_double(*coord);
++
++    dx /= ctx->scale;
++    *coord = wl_fixed_from_double(dx);
++  }
++}
+ 
+-  dx /= ctx->scale;
+-  *coord = wl_fixed_from_double(dx);
++void sl_transform_output_dimensions(struct sl_context* ctx,
++                                    int32_t* width,
++                                    int32_t* height) {
++  *width = (*width) * ctx->scale;
++  *height = (*height) * ctx->scale;
+ }
+diff -Nur a/sommelier-transform.h b/sommelier-transform.h
+--- a/sommelier-transform.h	2022-06-25 21:57:33.874122780 +0800
++++ b/sommelier-transform.h	2022-06-25 21:58:10.986124762 +0800
+@@ -7,6 +7,66 @@
+ 
+ #include "sommelier-ctx.h"  // NOLINT(build/include_directory)
+ 
++// Direct Scaling Mode Explained:
++//
++// It will be helpful to define the 3 coordinate spaces that we need to
++// manage:
++//
++// 1. Physical Coordinate Space: This refers to the actual physical dimensions
++//    of the devices display. Typical sizes would be 3840x2160, 1920x1080, etc.
++//
++// 2. Virtual Coordinate Space: This refers to the coordinate space that is
++//    formed by multiplying the scale factor with the physical dimensions.
++//    (Example: scale = 1.0, physical = 3840x2160, virtual = 3840x2160)
++//    (Example: scale = 0.5, physical = 3840x2160, virtual = 1920x1080)
++//    The scale factor will come from the "--scale" command line parameter or
++//    from the associated environment variable.
++//
++// 3. Host Logical Space: The dimensions of this space are defined
++//    entirely by the host. The exact dimensions are retrieved through
++//    the xdg_output interface. It is assumed that there is a direct, linear
++//    relationship between the logical space and the physical space on the
++//    host. As an example:
++//     a) A 1600x900 logical space
++//     b) A 3840x2160 physical space
++//
++//     If we place a 1600x900 dimensioned object at the origin of the logical
++//     space, it should appear as a 3840x2160 object within the physical space
++//     (also at the origin).
++//
++// The product of the desired scale factor and the physical dimensions may
++// result in non-integer values. In these cases, the result
++// is rounded down towards zero (truncate). This slight modification
++// will require recomputation of the scale factors to maintain consistency
++// between the two coordinate spaces. For this reason, the (single) scale
++// factor provided as input from the user is used to generate the virtual
++// coordinates. Then once those have been computed (and rounded), the scale
++// factors for each axis will then be recalculated using the virtual and
++// logical dimensions. Each axis is given its own scale factor because
++// it is possible for only one axis to require rounding.
++//
++// The logical coordinates come to us from the host. This is the
++// coordinate space that the host is operating in. This can change
++// based on the users scale settings.
++//
++// The physical coordinate space is no longer necessary once the virtual
++// coordinate space has been formed, so no scaling factors are needed to
++// convert to that space.
++//
++// Xwayland operates within the virtual coordinate space and the
++// host is operating within its logical space. Sommelier only needs to
++// facilitate translations between these two coordinate spaces.
++//
++// The virtual to logical scale factors are derived from the ratios between
++// the virtual coordinate spaces dimensions and the logical coordinate spaces
++// dimensions.
++//
++// In this mode, a buffer that is full screen sized within Xwayland (virtual)
++// will also be full screen sized in the logical coordinate space. The same
++// pattern holds with a quarter resolution sized image. With a scale factor
++// of 1.0, it is expected that there will be no scaling done to present the
++// image onto the screen.
++
+ // Coordinate transform functions
+ //
+ // In general, the transformation functions fall under one of these
+@@ -75,4 +135,13 @@
+                                       wl_fixed_t* coord,
+                                       uint32_t axis);
+ 
++// This function performs the physical to virtual transformation
++// based on the scale factor provided by the command line/env.
++// This function is called in response to the physical dimensions being sent
++// by the host. The virtual dimensions are calculated by this function and
++// then relayed to the guest.
++void sl_transform_output_dimensions(struct sl_context* ctx,
++                                    int32_t* width,
++                                    int32_t* height);
++
+ #endif  // VM_TOOLS_SOMMELIER_SOMMELIER_TRANSFORM_H_

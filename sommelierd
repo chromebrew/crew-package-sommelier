@@ -1,29 +1,59 @@
 #!/usr/bin/env ruby
+require 'optparse'
 require 'fileutils'
 require 'securerandom'
 
-$LOGFILE = (ENV['SOMMELIER_LOG'].to_s.empty?) ? '/tmp/sommelier.log' : ENV['SOMMELIER_LOG']
+SOMMELIERD_VERSION = '1.1'
+$LOGFILE = (ENV.fetch('SOMMELIER_LOG', '').empty?) ? '/tmp/sommelier.log' : ENV['SOMMELIER_LOG']
 
 # set XDG_RUNTIME_DIR if not set
-ENV['XDG_RUNTIME_DIR'] = (ENV['XDG_RUNTIME_DIR'].to_s.empty?) ? '/var/run/chrome' : ENV['XDG_RUNTIME_DIR']
+ENV['XDG_RUNTIME_DIR'] = (ENV.fetch('XDG_RUNTIME_DIR', '').empty?) ? '/var/run/chrome' : ENV['XDG_RUNTIME_DIR']
 
-SOMMELIER_X_DISPLAY = (ENV['SOMMELIER_X_DISPLAY'].to_s.empty?) ? ':0' : ENV['SOMMELIER_X_DISPLAY']
-SOMMELIER_WL_DISPLAY = (ENV['SOMMELIER_WL_DISPLAY'].to_s.empty?) ? 'wayland-1' : ENV['SOMMELIER_WL_DISPLAY']
+SOMMELIER_X_DISPLAY = (ENV.fetch('SOMMELIER_X_DISPLAY', '').empty?) ? ':0' : ENV['SOMMELIER_X_DISPLAY']
+SOMMELIER_WL_DISPLAY = (ENV.fetch('SOMMELIER_WL_DISPLAY', '').empty?) ? 'wayland-1' : ENV['SOMMELIER_WL_DISPLAY']
 
-HELP = <<EOT
-sommelierd: Sommelier daemon manager
-
-Usage: sommelierd <command>
-
-  --start     start sommelier daemon
-  --stop      stop sommelier daemon
-  --restart   restart sommelier daemon
-  --log       print daemon output, check and print new outputs repeatedly (blocking)
-  --help, -h  print this message
-
-EOT
+# expected location of this script: #{CREW_PREFIX}/bin
+CREW_PREFIX = File.expand_path('..', __dir__)
+PROG = File.basename($0)
 
 trap('INT') { abort 'Interrupted' }
+
+$action = nil
+
+begin
+  OptionParser.new do |opts|
+    opts.version = SOMMELIERD_VERSION
+    opts.banner = <<~EOT
+      sommelierd: Sommelier daemon manager
+
+      Usage: sommelierd [COMMAND]
+
+    EOT
+
+    opts.on('--start',   'start sommelier daemon')                 { $action = 'start' }
+    opts.on('--stop',    'stop sommelier daemon')                  { $action = 'stop' }
+    opts.on('--restart', 'restart sommelier daemon')               { $action = 'restart' }
+    opts.on('--status',  'get status of all sommelier daemons')    { $action = 'status' }
+    opts.on('--log',     'monitor daemon output')                  { $action = 'log' }
+
+    opts.on('-h', '--help', 'print this message') do
+      puts(opts.help)
+      exit
+    end
+  end.parse!
+rescue OptionParser::AmbiguousOption, OptionParser::InvalidOption => e
+  abort <<~EOT
+    Invaild command: #{e.args[0]}
+  
+    Type `sommelierd --help` for usage.
+  EOT
+end
+
+# set $action according to $0 if this script were executed via the {start,restart,stop}sommelier symlink
+case PROG
+when 'startsommelier', 'restartsommelier', 'stopsommelier'
+  $action = PROG[/^(.+)sommelier$/, 1]
+end
 
 def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
   Process.fork do
@@ -41,7 +71,29 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
 
     begin
       socket_file = "/tmp/.X11-unix/X#{display.tr(':', '')}"
+      dpi_file = "#{CREW_PREFIX}/etc/sommelier.dpi"
+
+      if ! ENV.fetch('SOMMELIER_DPI', '').empty?
+        # set Xft.dpi to SOMMELIER_DPI if set
+        dpi = ENV['SOMMELIER_DPI']
+      elsif File.exist?(dpi_file)
+        # read system DPI value from #{CREW_PREFIX}/etc/sommelier.dpi
+        dpi = File.read(dpi_file)
+      else
+        # use default DPI value (96) if sommelier.dpi does not exist
+        dpi = '96'
+        warn '[sommelier_x11]: ' + "\e[1;33m" + 'sommelier.dpi does not exist, scaling might be incorrect without it' + "\e[0m"
+        warn '[sommelier_x11]: ' + "\e[1;33m" + "(generate it by running '#{CREW_PREFIX}/lib/sommelier/dpi_checker/dpi_checker.rb')" + "\e[0m"
+      end
+
+      puts "[sommelier_x11]: current DPI value: #{dpi}"
+
+      ENV['SOMMELIER_DPI'] = dpi
+      ENV['SOMMELIER_GLAMOR'] = '1'
+
       IO.popen([ 'sommelier', '-X', '--glamor',
+        '--direct-scale',
+        "--dpi=#{dpi}",
         "--x-display=#{display}",
         "--x-auth=/home/chronos/.Xauthority",
         '--no-exit-with-child',
@@ -53,27 +105,27 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
           echo -n >> /home/chronos/.Xauthority
 
           xauth -f /home/chronos/.Xauthority add ${DISPLAY} . "#{SecureRandom.hex(16)}"
-          source #{__dir__}/../etc/sommelierrc
+          source #{CREW_PREFIX}/etc/sommelierrc
         CMD
       ], err: [:child, :out]) do |io|
-        puts "[somm_x11]: process running with PID #{io.pid}"
+        puts "[sommelier_x11]: process running with process ID #{io.pid}"
         File.write('/tmp/sommelier-x.pid', io.pid) # write pid to /tmp/sommelier-x.pid
 
         # write current display number to /tmp/sommelier-x.display (used for checking available display in sommelier.env)
         File.write('/tmp/sommelier-x.display', display)
 
-        print "[somm_x11]: #{io.gets}" until io.eof?
+        print "[sommelier_x11]: #{io.gets}" until io.eof?
         io.close
       end
-      puts '[somm_x11]: process exited'
+      puts '[sommelier_x11]: process exited'
     ensure
       FileUtils.rm_f [ socket_file, *Dir['/tmp/sommelier-x.{display,pid}'] ]
-      puts "[somm_x11]: socket #{socket_file} removed."
+      puts "[sommelier_x11]: socket #{socket_file} removed."
     end
   end
 end
 
-def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
+def start_sommelier_wl_daemon (display = SOMMELIER_WL_DISPLAY)
   Process.fork do
     Process.setproctitle 'sommelier Wayland daemon (wrapper script)'
 
@@ -90,19 +142,19 @@ def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
     begin
       socket_file = "#{ENV['XDG_RUNTIME_DIR']}/#{display}"
       IO.popen([ 'sommelier', '--parent', "--socket=#{display}" ], err: [:child, :out]) do |io|
-        puts "[somm_wl]: process running with PID #{io.pid}"
+        puts "[sommelier_wl]: process running with process ID #{io.pid}"
         File.write('/tmp/sommelier-wl.pid', io.pid) # write pid to /tmp/sommelier-wl.pid
 
         # write current display number to /tmp/sommelier-wl.display (used for checking available display in sommelier.env)
         File.write('/tmp/sommelier-wl.display', display)
 
-        print "[somm_wl]: #{io.gets}" until io.eof?
+        print "[sommelier_wl]: #{io.gets}" until io.eof?
         io.close
       end
-      puts '[somm_wl]: process exited'
+      puts '[sommelier_wl]: process exited'
     ensure
       FileUtils.rm_f [ socket_file, "#{socket_file}.lock", *Dir['/tmp/sommelier-wl.{display,pid}'] ]
-      puts "[somm_wl]: socket #{socket_file} removed."
+      puts "[sommelier_wl]: socket #{socket_file} removed."
     end
   end
 end
@@ -119,7 +171,7 @@ def stop_somm
     end
   end
 
-  sleep 0.5 # ensure the daemon processes have been killed
+  sleep 1 # ensure the daemon processes have been killed
   puts "sommelier stopped"
 end
 
@@ -143,32 +195,33 @@ def vaild_daemon_running?
   end
 end
 
-if $0 =~ /(re)?startsommelier$/ or ARGV[0] =~ /^--(re)?start$/
-  stop_somm if $0 =~ /restartsommelier$/ or ARGV[0] == '--restart'
+case $action
+when 'start', 'restart'
+  stop_somm if $action == 'restart'
 
   unless vaild_daemon_running?
     $LOGIO = File.open($LOGFILE, 'w')
     $LOGIO.sync = true
     start_somm_x_daemon
-    start_somm_wl_daemon
+    start_sommelier_wl_daemon
   end
-elsif $0 =~ /stopsommelier/ or ARGV[0] == '--stop'
+when 'stop'
   stop_somm
-elsif ARGV[0] == '--log'
+when 'log'
   io = File.open($LOGFILE, 'r'); sleep(0.2) until File.exist?($LOGFILE)
   # print daemon output, check and print new outputs repeatedly
   while (sleep 0.2; log = io.read) do
     puts log.gsub(/^(\[.*?\])/, "\e[0;33m\\1\e[0m") unless log.empty?
   end
-elsif ARGV[0] == '--status'
+when 'status'
   abort "sommelier not running, see #{$LOGFILE} for more info." unless vaild_daemon_running?
-  puts "sommelier process running: #{File.read('/tmp/sommelier-x.pid')} #{File.read('/tmp/sommelier-wl.pid')}"
-elsif [ '--help', '-h' ].include?(ARGV[0])
-  puts HELP
+
+  puts "[sommelier-x11]: daemon running with process ID #{File.read('/tmp/sommelier-x.pid')}"
+  puts "[sommelier-wl]: daemon running with process ID #{File.read('/tmp/sommelier-wl.pid')}"
 else
-  STDERR.puts <<~EOT
-    Invaild command: #{ARGV[0]}
-    
+  abort <<~EOT
+    No command specified.
+
     Type `sommelierd --help` for usage.
   EOT
 end
