@@ -1,3 +1,33 @@
+# Copyright 2022 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# vm_tools: sommelier: Add direct scale mode
+#
+# This is a new mode within Sommelier in which the output
+# resolution reported to clients will have a simple and direct
+# relationship with the physical output resolution.
+#
+# This mode can be enabled with the addition of "--direct-scale"
+# parameter to the command line.
+#
+# The scale factor used for this calculation will be used directly,
+# without factoring in device/user scale settings from the host.
+#
+# The current scaling method, depending on the user scale setting,
+# can result in very large display buffers being allocated. This is
+# not an ideal scenario from a performance and memory footprint standpoint.
+#
+# BUG=b:217976094
+# TEST=Verified both original/direct scale modes within Borealis
+#
+# Change-Id: I38e51e184c637b105247eb32954bf775be7d03dc
+# Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/platform2/+/3700920
+# Reviewed-by: Nic Hollingum <hollingum@google.com>
+# Reviewed-by: Chloe Pelling <cpelling@google.com>
+# Commit-Queue: Isaac Bosompem <mrisaacb@google.com>
+# Tested-by: Isaac Bosompem <mrisaacb@google.com>
+
 diff -Nur a/BUILD.gn b/BUILD.gn
 --- a/BUILD.gn	2022-06-25 21:57:33.872122780 +0800
 +++ b/BUILD.gn	2022-06-25 21:58:10.986124762 +0800
