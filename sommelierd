@@ -125,7 +125,7 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
   end
 end
 
-def start_sommelier_wl_daemon (display = SOMMELIER_WL_DISPLAY)
+def start_somm_wl_daemon (display = SOMMELIER_WL_DISPLAY)
   Process.fork do
     Process.setproctitle 'sommelier Wayland daemon (wrapper script)'
 
@@ -214,7 +214,7 @@ when 'start', 'restart'
     $LOGIO = File.open($LOGFILE, 'w')
     $LOGIO.sync = true
     start_somm_x_daemon
-    start_sommelier_wl_daemon
+    start_somm_wl_daemon
   end
 when 'stop'
   stop_somm
