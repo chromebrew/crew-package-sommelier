@@ -1,6 +1,6 @@
-diff -Nur somm1/sommelier-shm.cc somm2/sommelier-shm.cc
---- somm1/sommelier-shm.cc	2022-03-16 14:54:18.677669819 +0800
-+++ somm2/sommelier-shm.cc	2022-03-16 14:54:52.133387903 +0800
+diff -Nur a/sommelier-shm.cc b/sommelier-shm.cc
+--- a/sommelier-shm.cc	2022-03-16 14:54:18.677669819 +0800
++++ b/sommelier-shm.cc	2022-03-16 14:54:52.133387903 +0800
 @@ -133,25 +133,9 @@
    struct sl_host_shm_pool* host =
        static_cast<sl_host_shm_pool*>(wl_resource_get_user_data(resource));

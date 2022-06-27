@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-set -eu
+#!/bin/bash -eu
 
 BINDIR="$(dirname "$(command -v "${0}")")"
 ARCH="$(uname -m)"

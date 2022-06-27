@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- dpi_checker.html: browser side of the DPI checker -->
+<html>
+  <style>
+    /* set background color to black when dark mode is activated */
+    @media (prefers-color-scheme: dark) {
+      html, body, div {
+        background-color: rgb(32, 33, 36);
+      }
+    }
+
+    /* `div` with 1 inch wide */
+    #for_dpi_checking {
+      height: 1in;
+      width: 1in;
+    }
+  </style>
+  <head>
+    <title>DPI Checker</title>
+  </head>
+  <body>
+    <div id="for_dpi_checking"></div>
+  </body>
+  <script>
+    // get DPI by mesuring a `div` with 1 inch wide in pixels
+    // system DPI = screen DPI * ratio
+    const div = document.getElementById('for_dpi_checking'),
+          dpi = div.offsetWidth * window.devicePixelRatio
+
+    console.log(`Calculated DPI: %c${dpi}`, 'color: cyan;')
+
+    // send the DPI back to dpi_checker.rb
+    fetch('/upload_result', { method: 'POST', body: dpi }).then(() => window.close());
+  </script>
+</html>

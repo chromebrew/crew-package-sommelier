@@ -1,6 +1,6 @@
-diff -Nur somm1/sommelier.cc somm2/sommelier.cc
---- somm1/sommelier.cc	2022-03-16 14:54:18.678670319 +0800
-+++ somm2/sommelier.cc	2022-03-16 14:54:52.132387403 +0800
+diff -Nur a/sommelier.cc b/sommelier.cc
+--- a/sommelier.cc	2022-03-16 14:54:18.678670319 +0800
++++ b/sommelier.cc	2022-03-16 14:54:52.132387403 +0800
 @@ -2407,16 +2407,11 @@
    wl_array_init(&ctx->selection_data);
    ctx->selection_data_ack_pending = 0;
