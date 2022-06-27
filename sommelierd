@@ -174,7 +174,7 @@ def stop_somm
   # check if the daemon processes have been killed each 0.5 seconds
   # maximum waiting time: 5 seconds
   count = 0
-  until (vaild_daemon_running? and count > 10) do
+  while (vaild_daemon_running? and count <= 10) do
     count += 1
     sleep 0.5
   end
