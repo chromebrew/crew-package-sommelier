@@ -171,8 +171,19 @@ def stop_somm
     end
   end
 
-  sleep 1 # ensure the daemon processes have been killed
-  puts "sommelier stopped"
+  # check if the daemon processes have been killed each 0.5 seconds
+  # maximum waiting time: 5 seconds
+  count = 0
+  until (vaild_daemon_running? and count > 10) do
+    count++
+    sleep 0.5
+  end
+
+  unless vaild_daemon_running?
+    puts 'sommelier stopped'
+  else
+    abort 'sommelier failed to stop'
+  end
 end
 
 def vaild_daemon_running?
