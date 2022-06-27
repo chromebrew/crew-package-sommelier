@@ -109,17 +109,17 @@ def start_somm_x_daemon (display = SOMMELIER_X_DISPLAY)
         CMD
       ], err: [:child, :out]) do |io|
         puts "[sommelier_x11]: process running with process ID #{io.pid}"
-        File.write('/tmp/sommelier-x.pid', io.pid) # write pid to /tmp/sommelier-x.pid
+        File.write('/tmp/sommelier-x11.pid', io.pid) # write pid to /tmp/sommelier-x11.pid
 
-        # write current display number to /tmp/sommelier-x.display (used for checking available display in sommelier.env)
-        File.write('/tmp/sommelier-x.display', display)
+        # write current display number to /tmp/sommelier-x11.display (used for checking available display in sommelier.env)
+        File.write('/tmp/sommelier-x11.display', display)
 
         print "[sommelier_x11]: #{io.gets}" until io.eof?
         io.close
       end
       puts '[sommelier_x11]: process exited'
     ensure
-      FileUtils.rm_f [ socket_file, *Dir['/tmp/sommelier-x.{display,pid}'] ]
+      FileUtils.rm_f [ socket_file, *Dir['/tmp/sommelier-x11.{display,pid}'] ]
       puts "[sommelier_x11]: socket #{socket_file} removed."
     end
   end
@@ -161,10 +161,10 @@ end
 
 def stop_somm
   # stop_somm: kill sommelier process listed in /tmp/sommelier-*.pid files
-  x_pid = ( File.exist?('/tmp/sommelier-x.pid') ) ? File.read('/tmp/sommelier-x.pid') : nil
+  x11_pid = ( File.exist?('/tmp/sommelier-x11.pid') ) ? File.read('/tmp/sommelier-x11.pid') : nil
   wl_pid = ( File.exist?('/tmp/sommelier-wl.pid') ) ? File.read('/tmp/sommelier-wl.pid') : nil
 
-  [ x_pid, wl_pid ].reject(&:nil?).each do |pid|
+  [ x11_pid, wl_pid ].reject(&:nil?).each do |pid|
     begin
       Process.kill('TERM', pid.to_i)
     rescue Errno::ESRCH
@@ -188,11 +188,11 @@ end
 
 def vaild_daemon_running?
   # vaild_daemon_running: check sommelier process validity
-  if File.exist?('/tmp/sommelier-x.pid') and File.exist?('/tmp/sommelier-wl.pid')
-    x_pid = File.read('/tmp/sommelier-x.pid')
+  if File.exist?('/tmp/sommelier-x11.pid') and File.exist?('/tmp/sommelier-wl.pid')
+    x11_pid = File.read('/tmp/sommelier-x11.pid')
     wl_pid = File.read('/tmp/sommelier-wl.pid')
 
-    [ x_pid, wl_pid ].each do |pid|
+    [ x11_pid, wl_pid ].each do |pid|
       begin
         # use Process.kill to test pid listed in /tmp/sommelier-*.pid files
         Process.kill(0, pid.to_i)
@@ -227,7 +227,7 @@ when 'log'
 when 'status'
   abort "sommelier not running, see #{$LOGFILE} for more info." unless vaild_daemon_running?
 
-  puts "[sommelier-x11]: daemon running with process ID #{File.read('/tmp/sommelier-x.pid')}"
+  puts "[sommelier-x11]: daemon running with process ID #{File.read('/tmp/sommelier-x11.pid')}"
   puts "[sommelier-wl]: daemon running with process ID #{File.read('/tmp/sommelier-wl.pid')}"
 else
   abort <<~EOT
