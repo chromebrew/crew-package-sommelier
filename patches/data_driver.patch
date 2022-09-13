@@ -23,3 +23,29 @@ diff -Nur a/sommelier.cc b/sommelier.cc
  
    xcb_get_atom_name_reply_t* atom_name_reply =
        xcb_get_atom_name_reply(ctx->connection, atom_name_cookie, NULL);
+
+diff -Nur a/sommelier-data-device-manager.cc b/sommelier-data-device-manager.cc
+--- a/sommelier-data-device-manager.cc     2022-09-13 17:28:28.371273642 +0800
++++ b/sommelier-data-device-manager.cc     2022-09-13 17:15:05.433962745 +0800
+@@ -179,18 +179,8 @@
+   struct sl_host_data_offer* host =
+       static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
+ 
+-  int pipe_fd, rv;
+-  rv = host->ctx->channel->create_pipe(pipe_fd);
+-  if (rv) {
+-    fprintf(stderr, "error: failed to create virtwl pipe: %s\n", strerror(-rv));
+-    close(fd);
+-    return;
+-  }
+-
+-  sl_data_transfer_create(wl_display_get_event_loop(host->ctx->host_display),
+-                          pipe_fd, fd);
+-
+-  wl_data_offer_receive(host->proxy, mime_type, pipe_fd);
++  wl_data_offer_receive(host->proxy, mime_type, fd);
++  close(fd);
+ }
+ 
+ static void sl_data_offer_destroy(struct wl_client* client,
+
